@@ -27,7 +27,7 @@ pub fn fetch(path: &PathBuf,
     debug!("Fetching {}(v: {})", crate_name, crate_version);
     let url = format!("{}{}/{}/download", upstream, crate_name, crate_version);
     trace!("Fetching from {}", url);
-    let _ = fs::create_dir_all(PathBuf::from(format!("{}/crates/{}", index_path, crate_name)));
+    let _ = fs::create_dir_all(PathBuf::from(format!("{}/crates/{}/{}", index_path, crate_name, crate_version)));
     Command::new("curl").arg("-o").arg(&path) // Save to disk
                          .arg("-L") // Follow redirects
                          .arg("-s") // Quietly!
@@ -43,7 +43,7 @@ pub fn size(path: &PathBuf) -> u64 {
 }
 
 fn try_fetch(config: &Config, crate_name: &str, crate_version: &str) {
-    let path = PathBuf::from(format!("{}/crates/{}/{}",
+    let path = PathBuf::from(format!("{}/crates/{}/{}/download",
                                      config.index_path,
                                      crate_name,
                                      crate_version));
