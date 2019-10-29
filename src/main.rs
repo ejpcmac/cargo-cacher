@@ -50,7 +50,8 @@ pub struct Config {
     git_index_path: String,
     upstream: String,
     index: String,
-    extern_url: String,
+    api_location: String,
+    dl_location: String,
     port: u16,
     refresh_interval: Duration,
     threads: u32,
@@ -102,12 +103,17 @@ impl Config {
                 .required(false)
                 .takes_value(true)
                 .help("Port to listen on (Default: 8080)"))
-            .arg(Arg::with_name("extern-url")
-                .long("eurl")
-                .short("e")
+            .arg(Arg::with_name("api-location")
+                .long("api")
+                .short("a")
                 .required(false)
                 .takes_value(true)
-                .help("Externally reachable URL (Default: http://localhost:8080)"))
+                .help("Location of the API (Default: http://localhost:{port})"))
+            .arg(Arg::with_name("dl-location")
+                .long("--dl")
+                .required(false)
+                .takes_value(true)
+                .help("URL where to download crates (Default: {api-location}/api/v1/crates"))
             .arg(Arg::with_name("refresh")
                 .short("r")
                 .required(false)
@@ -141,6 +147,10 @@ impl Config {
         let port = u16::from_str(matches.value_of("port")
                     .unwrap_or("8080"))
                 .unwrap_or(8080);
+        let api_location = matches.value_of("api-location")
+                .map(Into::into)
+                .unwrap_or(format!("http://localhost:{}", port));
+
         Config {
             all: matches.is_present("all"),
             prefetch_path: matches.value_of("prefetch").map(|r| r.to_string()),
@@ -154,9 +164,10 @@ impl Config {
                 .unwrap_or("https://github.com/rust-lang/crates.io-index.git")
                 .into(),
             port: port,
-            extern_url: matches.value_of("extern-url")
+            dl_location: matches.value_of("dl-location")
                 .map(Into::into)
-                .unwrap_or(format!("http://localhost:{}", port)),
+                .unwrap_or(format!("http://{}/api/v1/crates", api_location)),
+            api_location: api_location,
             refresh_interval: matches.value_of("refresh")
                 .unwrap_or("10 minutes")
                 .parse::<humantime::Duration>()

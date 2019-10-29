@@ -1,5 +1,5 @@
-use std::io::prelude::*;
 use std::fs::File;
+use std::io::prelude::*;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
 use std::thread::{self, sleep};
@@ -9,21 +9,23 @@ use crates::fetch_all;
 
 pub fn init_sync(git_path: PathBuf, config: &Config) {
     let config = config.clone();
-    git_sync(&git_path, &config.index, &config.extern_url);
+    git_sync(&git_path, &config.index, &config.api_location, &config.dl_location);
     thread::spawn(move || loop {
         sleep(config.refresh_interval);
-        git_sync(&git_path, &config.index, &config.extern_url);
+        git_sync(&git_path, &config.index, &config.api_location, &config.dl_location);
         if config.all {
             fetch_all(&config);
         }
     });
 }
 
-pub fn git_sync(git_path: &PathBuf, index_path: &str, extern_url: &str) {
-    debug!("Syncing git repo at {} with {}, setting API url to {}",
-           git_path.to_str().unwrap(),
-           index_path,
-           extern_url);
+pub fn git_sync(git_path: &PathBuf, index_path: &str, api_location: &str, dl_location: &str) {
+    debug!(
+        "Syncing git repo at {} with {}, setting API url to {}",
+        git_path.to_str().unwrap(),
+        index_path,
+        api_location
+    );
     let mut repo_path = git_path.clone();
     repo_path.push(".git");
     debug!("Repo path is {:?}", repo_path);
@@ -35,7 +37,8 @@ pub fn git_sync(git_path: &PathBuf, index_path: &str, extern_url: &str) {
             .stderr(Stdio::null())
             .stdout(Stdio::null())
             .current_dir(git_path)
-            .status() {
+            .status()
+        {
             Ok(s) => Some(s),
             Err(e) => {
                 warn!("Error pulling: {:?}", e);
@@ -51,7 +54,8 @@ pub fn git_sync(git_path: &PathBuf, index_path: &str, extern_url: &str) {
             .current_dir(git_path)
             .stderr(Stdio::null())
             .stdout(Stdio::null())
-            .status() {
+            .status()
+        {
             Ok(s) => {
                 Command::new("git")
                     .arg("config")
@@ -71,11 +75,12 @@ pub fn git_sync(git_path: &PathBuf, index_path: &str, extern_url: &str) {
     config_path.push("config.json");
     if let Ok(mut f) = File::create(config_path) {
         let config = format!("{{
-  \"dl\": \"{0}/api/v1/crates\",
-  \"api\": \"{0}/\"
+  \"dl\": \"{0}\",
+  \"api\": \"{1}\"
 }}
 ",
-                             extern_url);
+            dl_location, api_location
+        );
         let _ = f.write(&config.as_bytes());
         Command::new("git")
             .arg("commit")
